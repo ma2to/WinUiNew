@@ -672,4 +672,604 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.ViewModels
         {
             try
             {
-                // Use semaphore to limit
+                // Use semaphore to limit concurrent validations
+                await _validationSemaphore!.WaitAsync(cancellationToken);
+
+                try
+                {
+                    // Double-check if still valid
+                    if (cancellationToken.IsCancellationRequested || _disposed)
+                        return;
+
+                    _logger.LogTrace("Executing throttled validation for cell: {CellKey}", cellKey);
+
+                    // Perform actual validation
+                    await _validationService.ValidateCellAsync(cell, row, cancellationToken);
+                    row.UpdateValidationStatus();
+
+                    _logger.LogTrace("Throttled validation completed for cell: {CellKey}", cellKey);
+                }
+                finally
+                {
+                    _validationSemaphore.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when validation is cancelled
+                _logger.LogTrace("Throttled validation cancelled for cell: {CellKey}", cellKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in throttled validation for cell: {CellKey}", cellKey);
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "ValidateCellThrottled"));
+            }
+        }
+
+        private async Task ClearAllDataInternalAsync()
+        {
+            ThrowIfDisposed();
+
+            try
+            {
+                if (!IsInitialized) return;
+
+                _logger.LogDebug("Clearing all data");
+
+                await Task.Run(() =>
+                {
+                    foreach (var row in Rows)
+                    {
+                        foreach (var cell in row.Cells.Values.Where(c => !_columnService.IsSpecialColumn(c.ColumnName)))
+                        {
+                            cell.Value = null;
+                            cell.ClearValidationErrors();
+                        }
+                    }
+                });
+
+                _logger.LogInformation("All data cleared");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error clearing all data");
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "ClearAllDataInternalAsync"));
+            }
+        }
+
+        private async Task RemoveEmptyRowsInternalAsync()
+        {
+            ThrowIfDisposed();
+
+            try
+            {
+                _logger.LogDebug("Removing empty rows");
+
+                var result = await Task.Run(() =>
+                {
+                    var dataRows = Rows.Where(r => !r.IsEmpty).ToList();
+
+                    var minEmptyRows = Math.Min(10, _initialRowCount / 5);
+                    var emptyRowsNeeded = Math.Max(minEmptyRows, _initialRowCount - dataRows.Count);
+
+                    var newEmptyRows = new List<DataGridRow>();
+                    for (int i = 0; i < emptyRowsNeeded; i++)
+                    {
+                        newEmptyRows.Add(CreateEmptyRowWithRealTimeValidation(dataRows.Count + i));
+                    }
+
+                    return new { DataRows = dataRows, EmptyRows = newEmptyRows };
+                });
+
+                Rows.Clear();
+                Rows.AddRange(result.DataRows);
+                Rows.AddRange(result.EmptyRows);
+
+                _logger.LogInformation("Empty rows removed, {DataRowCount} data rows kept, {EmptyRowCount} empty rows added",
+                    result.DataRows.Count, result.EmptyRows.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing empty rows");
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "RemoveEmptyRowsInternalAsync"));
+            }
+        }
+
+        private async Task CopySelectedCellsInternalAsync()
+        {
+            ThrowIfDisposed();
+
+            try
+            {
+                var selectedCells = GetSelectedCells();
+                await _clipboardService.CopySelectedCellsAsync(selectedCells);
+                _logger.LogDebug("Copied selected cells to clipboard");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error copying selected cells");
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "CopySelectedCellsInternalAsync"));
+            }
+        }
+
+        private async Task PasteFromClipboardInternalAsync()
+        {
+            ThrowIfDisposed();
+
+            try
+            {
+                if (!IsInitialized) return;
+
+                var currentCell = _navigationService.CurrentCell;
+                if (currentCell == null) return;
+
+                var startRowIndex = currentCell.RowIndex;
+                var startColumnIndex = currentCell.ColumnIndex;
+
+                var success = await _clipboardService.PasteToPositionAsync(startRowIndex, startColumnIndex, Rows.ToList(), Columns.ToList());
+
+                if (success)
+                {
+                    // Apply paste throttling delay before triggering validations
+                    if (ThrottlingConfig.IsEnabled && ThrottlingConfig.PasteDelayMs > 0)
+                    {
+                        await Task.Delay(ThrottlingConfig.PasteDelayMs);
+                    }
+
+                    _logger.LogDebug("Pasted data from clipboard at position [{Row},{Col}]", startRowIndex, startColumnIndex);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error pasting from clipboard");
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "PasteFromClipboardInternalAsync"));
+            }
+        }
+
+        private void DeleteRowInternal(DataGridRow? row)
+        {
+            if (_disposed || row == null) return;
+
+            try
+            {
+                if (Rows.Contains(row))
+                {
+                    foreach (var cell in row.Cells.Values.Where(c => !_columnService.IsSpecialColumn(c.ColumnName)))
+                    {
+                        cell.Value = null;
+                        cell.ClearValidationErrors();
+                    }
+
+                    _logger.LogDebug("Row deleted: {RowIndex}", row.RowIndex);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting row");
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "DeleteRowInternal"));
+            }
+        }
+
+        private void ToggleKeyboardShortcuts()
+        {
+            if (_disposed) return;
+
+            try
+            {
+                IsKeyboardShortcutsVisible = !IsKeyboardShortcutsVisible;
+                _logger.LogDebug("Keyboard shortcuts visibility toggled to: {IsVisible}", IsKeyboardShortcutsVisible);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling keyboard shortcuts visibility");
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "ToggleKeyboardShortcuts"));
+            }
+        }
+
+        private DataTable ConvertToDataTable(List<Dictionary<string, object?>> data)
+        {
+            var dataTable = new DataTable();
+
+            if (data?.Count > 0)
+            {
+                // Create columns from first dictionary
+                foreach (var key in data[0].Keys)
+                {
+                    dataTable.Columns.Add(key, typeof(object));
+                }
+
+                // Add rows
+                foreach (var row in data)
+                {
+                    var dataRow = dataTable.NewRow();
+                    foreach (var kvp in row)
+                    {
+                        dataRow[kvp.Key] = kvp.Value ?? DBNull.Value;
+                    }
+                    dataTable.Rows.Add(dataRow);
+                }
+            }
+
+            return dataTable;
+        }
+
+        private List<DataGridCell> GetSelectedCells()
+        {
+            var selectedCells = new List<DataGridCell>();
+
+            foreach (var row in Rows)
+            {
+                foreach (var cell in row.Cells.Values)
+                {
+                    if (cell.IsSelected)
+                    {
+                        selectedCells.Add(cell);
+                    }
+                }
+            }
+
+            return selectedCells;
+        }
+
+        private void ClearCollections()
+        {
+            try
+            {
+                // Cancel all pending validations
+                foreach (var cts in _pendingValidations.Values)
+                {
+                    cts.Cancel();
+                    cts.Dispose();
+                }
+                _pendingValidations.Clear();
+
+                // Clear rows and unsubscribe from cell events
+                if (Rows?.Count > 0)
+                {
+                    foreach (var row in Rows)
+                    {
+                        foreach (var cell in row.Cells.Values)
+                        {
+                            // Note: PropertyChanged events will be GC'd when cells are disposed
+                        }
+                    }
+                }
+
+                Rows?.Clear();
+                Columns?.Clear();
+
+                _logger.LogDebug("Collections cleared successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error clearing collections");
+            }
+        }
+
+        #endregion
+
+        #region Advanced Public Methods
+
+        /// <summary>
+        /// Odstráni riadky ktoré nevyhovujú vlastným validačným pravidlám
+        /// </summary>
+        public async Task<int> RemoveRowsByValidationAsync(List<ValidationRule> customRules)
+        {
+            ThrowIfDisposed();
+
+            try
+            {
+                if (!IsInitialized || customRules?.Count == 0)
+                    return 0;
+
+                _logger.LogDebug("Removing rows by custom validation with {RuleCount} rules", customRules.Count);
+
+                var result = await Task.Run(() =>
+                {
+                    var rowsToRemove = new List<DataGridRow>();
+                    var dataRows = Rows.Where(r => !r.IsEmpty).ToList();
+
+                    foreach (var row in dataRows)
+                    {
+                        foreach (var rule in customRules)
+                        {
+                            var cell = row.GetCell(rule.ColumnName);
+                            if (cell != null && !rule.Validate(cell.Value, row))
+                            {
+                                rowsToRemove.Add(row);
+                                break;
+                            }
+                        }
+                    }
+
+                    return rowsToRemove;
+                });
+
+                foreach (var row in result)
+                {
+                    Rows.Remove(row);
+                }
+
+                // Ensure we have enough empty rows
+                var currentEmptyRows = Rows.Count(r => r.IsEmpty);
+                var minEmptyRows = Math.Min(10, _initialRowCount / 5);
+                var neededEmptyRows = Math.Max(minEmptyRows, _initialRowCount - Rows.Count(r => !r.IsEmpty));
+
+                for (int i = currentEmptyRows; i < neededEmptyRows; i++)
+                {
+                    Rows.Add(CreateEmptyRowWithRealTimeValidation(Rows.Count));
+                }
+
+                _logger.LogInformation("Removed {RowCount} rows by custom validation", result.Count);
+                return result.Count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing rows by custom validation");
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "RemoveRowsByValidationAsync"));
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Odstráni riadky ktoré spĺňajú zadanú podmienku
+        /// </summary>
+        public async Task RemoveRowsByConditionAsync(string columnName, Func<object?, bool> condition)
+        {
+            ThrowIfDisposed();
+
+            try
+            {
+                _logger.LogDebug("Removing rows by condition for column: {ColumnName}", columnName);
+
+                var result = await Task.Run(() =>
+                {
+                    var rowsToRemove = new List<DataGridRow>();
+
+                    foreach (var row in Rows.Where(r => !r.IsEmpty).ToList())
+                    {
+                        if (columnName == "HasValidationErrors")
+                        {
+                            if (condition(row.HasValidationErrors))
+                                rowsToRemove.Add(row);
+                        }
+                        else
+                        {
+                            var cell = row.GetCell(columnName);
+                            if (cell != null && condition(cell.Value))
+                                rowsToRemove.Add(row);
+                        }
+                    }
+
+                    return rowsToRemove;
+                });
+
+                foreach (var row in result)
+                {
+                    Rows.Remove(row);
+                }
+
+                // Ensure we have enough empty rows
+                var currentEmptyRows = Rows.Count(r => r.IsEmpty);
+                var minEmptyRows = Math.Min(10, _initialRowCount / 5);
+                var neededEmptyRows = Math.Max(minEmptyRows, _initialRowCount - Rows.Count(r => !r.IsEmpty));
+
+                for (int i = currentEmptyRows; i < neededEmptyRows; i++)
+                {
+                    Rows.Add(CreateEmptyRowWithRealTimeValidation(Rows.Count));
+                }
+
+                _logger.LogInformation("Removed {RowCount} rows by condition for column: {ColumnName}", result.Count, columnName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing rows by condition for column: {ColumnName}", columnName);
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "RemoveRowsByConditionAsync"));
+            }
+        }
+
+        /// <summary>
+        /// Validuje konkrétny riadok
+        /// </summary>
+        public async Task<List<ValidationResult>> ValidateRowAsync(DataGridRow row)
+        {
+            ThrowIfDisposed();
+
+            try
+            {
+                return await _validationService.ValidateRowAsync(row);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating row");
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "ValidateRowAsync"));
+                return new List<ValidationResult>();
+            }
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        private void OnDataChanged(object? sender, DataChangeEventArgs e)
+        {
+            if (_disposed) return;
+            _logger.LogTrace("Data changed: {ChangeType}", e.ChangeType);
+        }
+
+        private void OnValidationCompleted(object? sender, ValidationCompletedEventArgs e)
+        {
+            if (_disposed) return;
+            _logger.LogTrace("Validation completed for row. Is valid: {IsValid}", e.IsValid);
+        }
+
+        private void OnDataServiceErrorOccurred(object? sender, ComponentErrorEventArgs e)
+        {
+            if (_disposed) return;
+            _logger.LogError(e.Exception, "DataService error: {Operation}", e.Operation);
+            OnErrorOccurred(e);
+        }
+
+        private void OnValidationServiceErrorOccurred(object? sender, ComponentErrorEventArgs e)
+        {
+            if (_disposed) return;
+            _logger.LogError(e.Exception, "ValidationService error: {Operation}", e.Operation);
+            OnErrorOccurred(e);
+        }
+
+        private void OnNavigationServiceErrorOccurred(object? sender, ComponentErrorEventArgs e)
+        {
+            if (_disposed) return;
+            _logger.LogError(e.Exception, "NavigationService error: {Operation}", e.Operation);
+            OnErrorOccurred(e);
+        }
+
+        #endregion
+
+        #region IDisposable Implementation
+
+        /// <summary>
+        /// Dispose pattern implementation for proper memory cleanup
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                try
+                {
+                    _logger?.LogDebug("Disposing AdvancedDataGridViewModel...");
+
+                    // Unsubscribe from all events
+                    UnsubscribeFromEvents();
+
+                    // Clear collections
+                    ClearCollections();
+
+                    // Dispose semaphore
+                    _validationSemaphore?.Dispose();
+
+                    // Clear commands
+                    ClearCommands();
+
+                    _isInitialized = false;
+
+                    _logger?.LogInformation("AdvancedDataGridViewModel disposed successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Error during AdvancedDataGridViewModel disposal");
+                }
+            }
+
+            _disposed = true;
+        }
+
+        private void UnsubscribeFromEvents()
+        {
+            try
+            {
+                if (_dataService != null)
+                {
+                    _dataService.DataChanged -= OnDataChanged;
+                    _dataService.ErrorOccurred -= OnDataServiceErrorOccurred;
+                }
+
+                if (_validationService != null)
+                {
+                    _validationService.ValidationCompleted -= OnValidationCompleted;
+                    _validationService.ValidationErrorOccurred -= OnValidationServiceErrorOccurred;
+                }
+
+                if (_navigationService != null)
+                {
+                    _navigationService.ErrorOccurred -= OnNavigationServiceErrorOccurred;
+                }
+
+                _logger?.LogDebug("All service events unsubscribed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error unsubscribing from service events");
+            }
+        }
+
+        private void ClearCommands()
+        {
+            try
+            {
+                ValidateAllCommand = null!;
+                ClearAllDataCommand = null!;
+                RemoveEmptyRowsCommand = null!;
+                CopyCommand = null!;
+                PasteCommand = null!;
+                DeleteRowCommand = null!;
+                ExportToDataTableCommand = null!;
+                ToggleKeyboardShortcutsCommand = null!;
+
+                _logger?.LogDebug("Commands cleared successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error clearing commands");
+            }
+        }
+
+        /// <summary>
+        /// Finalizer - only if we have unmanaged resources
+        /// </summary>
+        ~AdvancedDataGridViewModel()
+        {
+            Dispose(false);
+        }
+
+        /// <summary>
+        /// Check if object is disposed
+        /// </summary>
+        protected void ThrowIfDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(AdvancedDataGridViewModel));
+        }
+
+        #endregion
+
+        #region Events & Property Changed
+
+        public event EventHandler<ComponentErrorEventArgs>? ErrorOccurred;
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected virtual void OnErrorOccurred(ComponentErrorEventArgs e)
+        {
+            if (_disposed) return;
+            ErrorOccurred?.Invoke(this, e);
+        }
+
+        protected virtual bool SetProperty<T>(ref T backingStore, T value, [CallerMemberName] string propertyName = "")
+        {
+            if (_disposed) return false;
+
+            if (EqualityComparer<T>.Default.Equals(backingStore, value))
+                return false;
+
+            backingStore = value;
+            OnPropertyChanged(propertyName);
+            return true;
+        }
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            if (_disposed) return;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        #endregion
+    }
+}
