@@ -1,10 +1,32 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<!-- RpaWinUiComponents.csproj - Opravený pre NuGet packaging -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Základné nastavenia projektu -->
   <PropertyGroup>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>RpaWinUiComponents</RootNamespace>
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>RpaWinUiComponents</PackageId>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Authors>RPA Solutions</Authors>
+    <Company>RPA Solutions</Company>
+    <Product>RpaWinUiComponents</Product>
+    <Description>Pokročilý WinUI 3 DataGrid komponent s real-time validáciou, copy/paste funkcionalitou a Clean Architecture.</Description>
+    <PackageTags>WinUI3;DataGrid;Validation;MVVM;CleanArchitecture;RPA</PackageTags>
+    <PackageProjectUrl>https://github.com/rpasolutions/RpaWinUiComponents</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rpasolutions/RpaWinUiComponents</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
@@ -15,34 +37,66 @@
     <PackageReference Include="System.Text.Json" Version="9.0.6" />
   </ItemGroup>
 
+
+  <!-- XAML Files -->
   <ItemGroup>
-    <!-- XAML Files -->
     <Page Include="**/*.xaml" Exclude="bin/**;obj/**" />
   </ItemGroup>
 
+  <!-- Code Behind Files -->
   <ItemGroup>
-    <Compile Remove="Themes\**" />
-    <Content Remove="Themes\**" />
-    <EmbeddedResource Remove="Themes\**" />
-    <None Remove="Themes\**" />
-    <Page Remove="Themes\**" />
-    <PRIResource Remove="Themes\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Code Behind Files -->
     <Compile Update="**/*.xaml.cs" DependentUpon="%(Filename)" />
   </ItemGroup>
 
+  <!-- Package Content Files -->
   <ItemGroup>
-    <!-- Package Content -->
+    <None Include="readme.md" Pack="true" PackagePath="\" />
     <None Include="build/RpaWinUiComponents.targets" Pack="true" PackagePath="build/" />
+    <!-- Icon placeholder - vytvorte alebo odstráňte ak nemáte -->
+    <!-- <None Include="icon.png" Pack="true" PackagePath="\" Condition="Exists('icon.png')" /> -->
   </ItemGroup>
 
+  <!-- Remove icon from package if it doesn't exist -->
+  <PropertyGroup Condition="!Exists('icon.png')">
+    <PackageIcon></PackageIcon>
+  </PropertyGroup>
+
+  <!-- Themes and Resources for packaging -->
   <ItemGroup>
-    <Page Update="AdvancedWinUiDataGrid\Views\AdvancedDataGridControl.xaml">
-      <SubType>Designer</SubType>
-    </Page>
+    <None Include="AdvancedWinUiDataGrid/Themes/Generic.xaml" Pack="true" PackagePath="lib/$(TargetFramework)/Themes/" />
+    <EmbeddedResource Include="AdvancedWinUiDataGrid/Themes/Generic.xaml" />
   </ItemGroup>
-  
+
+  <!-- Build Configuration -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+
+  <!-- XML Documentation -->
+  <PropertyGroup>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+    <!-- Disable missing XML comment warnings -->
+  </PropertyGroup>
+
+  <!-- Source code inclusion for debugging -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <!-- Exclude demo from package -->
+  <ItemGroup>
+    <Compile Remove="Demo/**" />
+    <None Remove="Demo/**" />
+    <Page Remove="Demo/**" />
+  </ItemGroup>
+
 </Project>

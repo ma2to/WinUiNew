@@ -59,12 +59,6 @@
     <None Include="Package.appxmanifest" />
   </ItemGroup>
 
-  <!-- Copy required assets -->
-  <ItemGroup>
-    <PRIResource Include="Strings\en-US\Resources.resw" />
-    <PRIResource Include="Strings\sk-SK\Resources.resw" />
-  </ItemGroup>
-
   <!-- Build configuration -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
     <EnableMsixTooling>true</EnableMsixTooling>

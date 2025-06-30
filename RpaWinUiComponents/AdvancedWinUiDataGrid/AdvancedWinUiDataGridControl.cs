@@ -1,4 +1,4 @@
-﻿//AdvancedWinUiDataGridControl.cs - HLAVNÝ WRAPPER KOMPONENT
+﻿// AdvancedWinUiDataGridControl.cs - OPRAVENÝ HLAVNÝ WRAPPER KOMPONENT
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -34,7 +34,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
         /// <summary>
         /// Event ktorý sa spustí pri chybe v komponente
         /// </summary>
-        public event EventHandler<ComponentError>? ErrorOccurred;
+        public event EventHandler<ComponentErrorEventArgs>? ErrorOccurred;
 
         #endregion
 
@@ -81,7 +81,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
         /// <param name="validationRules">Validačné pravidlá (voliteľné)</param>
         /// <param name="throttling">Throttling konfigurácia (voliteľné)</param>
         /// <param name="initialRowCount">Počiatočný počet riadkov</param>
-        public async Task Initialize(
+        public async Task InitializeAsync(
             List<ColumnDefinition> columns,
             List<ValidationRule>? validationRules = null,
             ThrottlingConfig? throttling = null,
@@ -93,7 +93,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "Initialize"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "InitializeAsync"));
             }
         }
 
@@ -108,7 +108,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "Reset"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "Reset"));
             }
         }
 
@@ -119,7 +119,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
         /// <summary>
         /// Načíta dáta z DataTable s automatickou validáciou
         /// </summary>
-        public async Task LoadData(DataTable dataTable)
+        public async Task LoadDataAsync(DataTable dataTable)
         {
             try
             {
@@ -127,14 +127,14 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "LoadData"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "LoadDataAsync"));
             }
         }
 
         /// <summary>
         /// Načíta dáta zo zoznamu dictionary objektov
         /// </summary>
-        public async Task LoadData(List<Dictionary<string, object?>> data)
+        public async Task LoadDataAsync(List<Dictionary<string, object?>> data)
         {
             try
             {
@@ -142,7 +142,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "LoadData"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "LoadDataAsync"));
             }
         }
 
@@ -153,7 +153,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
         /// <summary>
         /// Exportuje validné dáta do DataTable
         /// </summary>
-        public async Task<DataTable> ExportToDataTable()
+        public async Task<DataTable> ExportToDataTableAsync()
         {
             try
             {
@@ -161,7 +161,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "ExportToDataTable"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "ExportToDataTableAsync"));
                 return new DataTable();
             }
         }
@@ -173,7 +173,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
         /// <summary>
         /// Validuje všetky riadky a vráti true ak sú všetky validné
         /// </summary>
-        public async Task<bool> ValidateAll()
+        public async Task<bool> ValidateAllRowsAsync()
         {
             try
             {
@@ -181,7 +181,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "ValidateAll"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "ValidateAllRowsAsync"));
                 return false;
             }
         }
@@ -193,7 +193,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
         /// <summary>
         /// Vymaže všetky dáta zo všetkých buniek
         /// </summary>
-        public async Task ClearAllData()
+        public async Task ClearAllDataAsync()
         {
             try
             {
@@ -201,14 +201,14 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "ClearAllData"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "ClearAllDataAsync"));
             }
         }
 
         /// <summary>
         /// Odstráni všetky prázdne riadky
         /// </summary>
-        public async Task RemoveEmptyRows()
+        public async Task RemoveEmptyRowsAsync()
         {
             try
             {
@@ -216,14 +216,14 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "RemoveEmptyRows"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "RemoveEmptyRowsAsync"));
             }
         }
 
         /// <summary>
         /// Odstráni riadky ktoré spĺňajú zadanú podmienku
         /// </summary>
-        public async Task RemoveRowsByCondition(string columnName, Func<object?, bool> condition)
+        public async Task RemoveRowsByConditionAsync(string columnName, Func<object?, bool> condition)
         {
             try
             {
@@ -234,14 +234,14 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "RemoveRowsByCondition"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "RemoveRowsByConditionAsync"));
             }
         }
 
         /// <summary>
         /// Odstráni riadky ktoré nevyhovujú vlastným validačným pravidlám
         /// </summary>
-        public async Task<int> RemoveRowsByValidation(List<ValidationRule> customRules)
+        public async Task<int> RemoveRowsByValidationAsync(List<ValidationRule> customRules)
         {
             try
             {
@@ -253,7 +253,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "RemoveRowsByValidation"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "RemoveRowsByValidationAsync"));
                 return 0;
             }
         }
@@ -448,10 +448,10 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
 
         private void OnInternalError(object? sender, ComponentErrorEventArgs e)
         {
-            OnErrorOccurred(new ComponentError(e.Exception, e.Operation, e.AdditionalInfo));
+            OnErrorOccurred(e);
         }
 
-        private void OnErrorOccurred(ComponentError error)
+        private void OnErrorOccurred(ComponentErrorEventArgs error)
         {
             ErrorOccurred?.Invoke(this, error);
         }
@@ -477,7 +477,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
             }
             catch (Exception ex)
             {
-                OnErrorOccurred(new ComponentError(ex, "Dispose"));
+                OnErrorOccurred(new ComponentErrorEventArgs(ex, "Dispose"));
             }
         }
 

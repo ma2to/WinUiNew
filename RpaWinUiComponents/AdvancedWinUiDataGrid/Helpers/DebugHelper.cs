@@ -1,6 +1,7 @@
-﻿//Helpers/DebugHelper.cs
+﻿//Helpers/DebugHelper.cs - Opravený
 using System;
 using Microsoft.Extensions.Logging;
+using RpaWinUiComponents.AdvancedWinUiDataGrid.Configuration;
 
 namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Helpers
 {

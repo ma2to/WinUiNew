@@ -1,8 +1,9 @@
-﻿//RpaWinUiComponents.Demo/App.xaml.cs
+﻿//RpaWinUiComponents.Demo/App.xaml.cs - Opravený
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
+using MyWinUI3App;
 using RpaWinUiComponents.AdvancedWinUiDataGrid;
 using RpaWinUiComponents.AdvancedWinUiDataGrid.Configuration;
 using System;
@@ -23,7 +24,7 @@ namespace RpaWinUiComponents.Demo
         /// </summary>
         public App()
         {
-            InitializeComponent();
+            this.InitializeComponent();
 
             // Initialize dependency injection and logging
             _host = CreateHostBuilder().Build();
