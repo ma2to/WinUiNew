@@ -7,9 +7,19 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:RpaWinUiComponents.AdvancedWinUiDataGrid.Models"
+    xmlns:converters="using:RpaWinUiComponents.AdvancedWinUiDataGrid.Converters"
     mc:Ignorable="d">
 
     <UserControl.Resources>
+        <!-- Converters -->
+        <converters:ValidationErrorToBrushConverter x:Key="ValidationErrorToBrushConverter"/>
+        <converters:ValidationErrorToBorderBrushConverter x:Key="ValidationErrorToBorderBrushConverter"/>
+        <converters:ValidationErrorToBorderThicknessConverter x:Key="ValidationErrorToBorderThicknessConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:ObjectToStringConverter x:Key="ObjectToStringConverter"/>
+        <converters:ProgressToPercentageConverter x:Key="ProgressToPercentageConverter"/>
+        <converters:AlternatingRowBackgroundConverter x:Key="AlternatingRowBackgroundConverter"/>
+
         <!-- DataTemplate for Cell Content -->
         <DataTemplate x:Key="CellContentTemplate" x:DataType="models:DataGridCell">
             <Border Background="{x:Bind HasValidationError, Converter={StaticResource ValidationErrorToBrushConverter}, Mode=OneWay}"
@@ -95,13 +105,6 @@
                            VerticalAlignment="Center"/>
             </Border>
         </DataTemplate>
-
-        <!-- Converters -->
-        <local:ValidationErrorToBrushConverter x:Key="ValidationErrorToBrushConverter"/>
-        <local:ValidationErrorToBorderBrushConverter x:Key="ValidationErrorToBorderBrushConverter"/>
-        <local:ValidationErrorToBorderThicknessConverter x:Key="ValidationErrorToBorderThicknessConverter"/>
-        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <local:ObjectToStringConverter x:Key="ObjectToStringConverter"/>
 
         <!-- Progress Bar Style -->
         <Style x:Key="ValidationProgressStyle" TargetType="ProgressBar">
@@ -222,7 +225,7 @@
                                     BorderThickness="1,0,1,1"
                                     Background="{x:Bind IsEvenRow, Mode=OneWay, Converter={StaticResource AlternatingRowBackgroundConverter}}">
                                 <Grid x:Name="RowGrid" MinHeight="32">
-                                    <!-- Row content will be dynamically generated -->
+                                    <!-- Row content will be dynamically generated via code-behind -->
                                 </Grid>
                             </Border>
                         </DataTemplate>
