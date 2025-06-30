@@ -21,13 +21,21 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Themes\**" />
+    <Content Remove="Themes\**" />
+    <EmbeddedResource Remove="Themes\**" />
+    <None Remove="Themes\**" />
+    <Page Remove="Themes\**" />
+    <PRIResource Remove="Themes\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Code Behind Files -->
     <Compile Update="**/*.xaml.cs" DependentUpon="%(Filename)" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Package Content -->
-    <None Include="Themes/Generic.xaml" Pack="true" PackagePath="lib/$(TargetFramework)/Themes/" />
     <None Include="build/RpaWinUiComponents.targets" Pack="true" PackagePath="build/" />
   </ItemGroup>
 
