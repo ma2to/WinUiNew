@@ -1,4 +1,4 @@
-﻿//Views/AdvancedDataGridControl.xaml.cs - KOMPLETNÁ FUNKČNÁ VERZIA
+﻿//Views/AdvancedDataGridControl.xaml.cs - Zjednodušená verzia
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -8,13 +8,15 @@ using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 using RpaWinUiComponents.AdvancedWinUiDataGrid.Events;
-using RpaWinUiComponents.AdvancedWinUiDataGrid.Models;
 using RpaWinUiComponents.AdvancedWinUiDataGrid.ViewModels;
 using RpaWinUiComponents.AdvancedWinUiDataGrid.Configuration;
+
+// Alias pre riešenie konfliktu ColumnDefinition
+using DataGridColumnDefinition = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ColumnDefinition;
+using ValidationRule = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ValidationRule;
+using ThrottlingConfig = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ThrottlingConfig;
 
 namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
 {
@@ -28,20 +30,15 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
         private bool _disposed = false;
         private bool _isKeyboardShortcutsVisible = false;
 
-        // Grid generation state
-        private readonly Dictionary<int, Grid> _rowGrids = new();
-        private readonly List<ColumnDefinition> _currentColumns = new();
-        private readonly Dictionary<string, Border> _headerBorders = new();
-
         public AdvancedDataGridControl()
         {
-            InitializeComponent();
+            this.InitializeComponent();
 
             var loggerProvider = GetLoggerProvider();
             _logger = loggerProvider.CreateLogger<AdvancedDataGridControl>();
 
-            Loaded += OnLoaded;
-            Unloaded += OnUnloaded;
+            this.Loaded += OnLoaded;
+            this.Unloaded += OnUnloaded;
 
             _logger.LogDebug("AdvancedDataGridControl created");
         }
@@ -71,7 +68,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
                     UpdateKeyboardShortcutsVisibility();
                 }
 
-                DataContext = _viewModel;
+                this.DataContext = _viewModel;
             }
         }
 
@@ -85,7 +82,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
         /// Inicializuje komponent s konfiguráciou stĺpcov a validáciami
         /// </summary>
         public async Task InitializeAsync(
-            List<ColumnDefinition> columns,
+            List<DataGridColumnDefinition> columns,
             List<ValidationRule>? validationRules = null,
             ThrottlingConfig? throttling = null,
             int initialRowCount = 100)
@@ -104,13 +101,6 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
                 }
 
                 await _viewModel.InitializeAsync(columns, validationRules ?? new List<ValidationRule>(), throttling, initialRowCount);
-
-                // Store current columns for grid generation
-                _currentColumns.Clear();
-                _currentColumns.AddRange(_viewModel.Columns);
-
-                GenerateGridStructure();
-                SetupNavigationService();
 
                 _logger.LogInformation("AdvancedDataGrid initialized successfully with {InitialRowCount} rows", initialRowCount);
             }
@@ -276,7 +266,6 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
             {
                 _logger.LogInformation("Resetting AdvancedDataGrid");
                 _viewModel?.Reset();
-                ClearGridStructure();
 
                 _isKeyboardShortcutsVisible = false;
                 UpdateKeyboardShortcutsVisibility();
@@ -357,7 +346,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
         {
             try
             {
-                if (sender is Button button && button.CommandParameter is DataGridRow row)
+                if (sender is Button button && button.CommandParameter is RpaWinUiComponents.AdvancedWinUiDataGrid.Models.DataGridRow row)
                 {
                     _viewModel?.DeleteRowCommand?.Execute(row);
                     _logger.LogDebug("Delete row button clicked for row: {RowIndex}", row.RowIndex);
@@ -374,7 +363,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
         {
             try
             {
-                if (sender is TextBox textBox && textBox.DataContext is DataGridCell cell)
+                if (sender is TextBox textBox && textBox.DataContext is RpaWinUiComponents.AdvancedWinUiDataGrid.Models.DataGridCell cell)
                 {
                     cell.IsEditing = false;
                     _logger.LogTrace("Cell editing ended for: {ColumnName}", cell.ColumnName);
@@ -390,7 +379,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
         {
             try
             {
-                if (sender is TextBox textBox && textBox.DataContext is DataGridCell cell)
+                if (sender is TextBox textBox && textBox.DataContext is RpaWinUiComponents.AdvancedWinUiDataGrid.Models.DataGridCell cell)
                 {
                     switch (e.Key)
                     {
@@ -499,159 +488,11 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
 
         private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(AdvancedDataGridViewModel.Rows))
-            {
-                // Regenerate grid when rows change
-                DispatcherQueue.TryEnqueue(() => GenerateGridStructure());
-            }
-            else if (e.PropertyName == nameof(AdvancedDataGridViewModel.IsKeyboardShortcutsVisible))
+            if (e.PropertyName == nameof(AdvancedDataGridViewModel.IsKeyboardShortcutsVisible))
             {
                 // Sync keyboard shortcuts visibility
                 _isKeyboardShortcutsVisible = _viewModel?.IsKeyboardShortcutsVisible ?? false;
                 UpdateKeyboardShortcutsVisibility();
-            }
-        }
-
-        #endregion
-
-        #region Grid Generation
-
-        private void GenerateGridStructure()
-        {
-            try
-            {
-                if (_viewModel == null || _currentColumns.Count == 0)
-                    return;
-
-                GenerateHeaders();
-                GenerateRowGrids();
-
-                _logger.LogDebug("Generated grid structure with {ColumnCount} columns and {RowCount} rows",
-                    _currentColumns.Count, _viewModel.Rows.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error generating grid structure");
-            }
-        }
-
-        private void GenerateHeaders()
-        {
-            try
-            {
-                var headerGrid = HeaderGrid;
-                headerGrid.Children.Clear();
-                headerGrid.ColumnDefinitions.Clear();
-                _headerBorders.Clear();
-
-                double totalWidth = 0;
-
-                // Create column definitions and headers
-                for (int i = 0; i < _currentColumns.Count; i++)
-                {
-                    var column = _currentColumns[i];
-
-                    // Add column definition
-                    var colDef = new Microsoft.UI.Xaml.Controls.ColumnDefinition
-                    {
-                        Width = new GridLength(column.Width)
-                    };
-                    headerGrid.ColumnDefinitions.Add(colDef);
-                    totalWidth += column.Width;
-
-                    // Create header border
-                    var headerBorder = new Border
-                    {
-                        Background = new SolidColorBrush(Microsoft.UI.Colors.LightGray),
-                        BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray),
-                        BorderThickness = new Thickness(0, 0, 1, 1),
-                        Padding = new Thickness(8, 4)
-                    };
-
-                    var headerText = new TextBlock
-                    {
-                        Text = column.Header ?? column.Name,
-                        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        TextTrimming = TextTrimming.CharacterEllipsis
-                    };
-
-                    headerBorder.Child = headerText;
-                    Grid.SetColumn(headerBorder, i);
-                    headerGrid.Children.Add(headerBorder);
-
-                    _headerBorders[column.Name] = headerBorder;
-
-                    // Add sorting click handler if allowed
-                    if (column.AllowSort)
-                    {
-                        headerBorder.Tapped += (s, e) => OnHeaderTapped(column.Name);
-                        headerBorder.PointerEntered += (s, e) => headerBorder.Background = new SolidColorBrush(Microsoft.UI.Colors.LightBlue);
-                        headerBorder.PointerExited += (s, e) => headerBorder.Background = new SolidColorBrush(Microsoft.UI.Colors.LightGray);
-                    }
-                }
-
-                // Set minimum width for the entire grid
-                DataGridContainer.MinWidth = Math.Max(800, totalWidth);
-
-                _logger.LogDebug("Generated {ColumnCount} headers with total width {TotalWidth}",
-                    _currentColumns.Count, totalWidth);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error generating headers");
-            }
-        }
-
-        private void GenerateRowGrids()
-        {
-            try
-            {
-                // Clear existing row grids
-                _rowGrids.Clear();
-
-                // We need to handle this differently since ItemsRepeater manages the row visuals
-                // The actual row content generation happens in the ItemTemplate
-
-                _logger.LogDebug("Row grids structure prepared for {RowCount} rows", _viewModel?.Rows.Count ?? 0);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error generating row grids");
-            }
-        }
-
-        private void OnHeaderTapped(string columnName)
-        {
-            try
-            {
-                // Implement sorting logic here
-                _logger.LogDebug("Header tapped for column: {ColumnName}", columnName);
-
-                // TODO: Implement sorting functionality
-                // This would involve adding sorting logic to the ViewModel
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error handling header tap for column: {ColumnName}", columnName);
-            }
-        }
-
-        private void ClearGridStructure()
-        {
-            try
-            {
-                HeaderGrid?.Children.Clear();
-                HeaderGrid?.ColumnDefinitions.Clear();
-                _headerBorders.Clear();
-                _rowGrids.Clear();
-                _currentColumns.Clear();
-
-                _logger.LogDebug("Grid structure cleared");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error clearing grid structure");
             }
         }
 
@@ -689,28 +530,12 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
         {
             try
             {
-                KeyDown += OnMainControlKeyDown;
+                this.KeyDown += OnMainControlKeyDown;
                 _logger.LogDebug("Event handlers set up");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error setting up event handlers");
-            }
-        }
-
-        private void SetupNavigationService()
-        {
-            try
-            {
-                if (_viewModel?.NavigationService != null)
-                {
-                    _viewModel.NavigationService.Initialize(_viewModel.Rows.ToList(), _viewModel.Columns.ToList());
-                    _logger.LogDebug("Navigation service setup completed");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error setting up navigation service");
             }
         }
 
@@ -731,12 +556,12 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
                 if (ToggleKeyboardShortcutsButton != null)
                 {
                     var backgroundColor = _isKeyboardShortcutsVisible
-                        ? new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue)
-                        : new SolidColorBrush(Microsoft.UI.Colors.LightGray);
+                        ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.DodgerBlue)
+                        : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LightGray);
 
                     var foregroundColor = _isKeyboardShortcutsVisible
-                        ? new SolidColorBrush(Microsoft.UI.Colors.White)
-                        : new SolidColorBrush(Microsoft.UI.Colors.Black);
+                        ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.White)
+                        : new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Black);
 
                     ToggleKeyboardShortcutsButton.Background = backgroundColor;
                     ToggleKeyboardShortcutsButton.Foreground = foregroundColor;
@@ -754,9 +579,9 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
         {
             try
             {
-                KeyDown -= OnMainControlKeyDown;
-                Loaded -= OnLoaded;
-                Unloaded -= OnUnloaded;
+                this.KeyDown -= OnMainControlKeyDown;
+                this.Loaded -= OnLoaded;
+                this.Unloaded -= OnUnloaded;
 
                 _logger.LogDebug("All events unsubscribed");
             }
@@ -815,8 +640,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
                     _viewModel = null;
                 }
 
-                ClearGridStructure();
-                DataContext = null;
+                this.DataContext = null;
 
                 _disposed = true;
                 _logger?.LogInformation("AdvancedDataGridControl disposed successfully");
@@ -831,6 +655,15 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid.Views
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(AdvancedDataGridControl));
+        }
+
+        #endregion
+
+        #region Error Handling
+
+        protected virtual void OnErrorOccurred(ComponentErrorEventArgs e)
+        {
+            ErrorOccurred?.Invoke(this, e);
         }
 
         #endregion

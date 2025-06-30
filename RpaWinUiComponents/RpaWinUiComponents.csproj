@@ -1,6 +1,5 @@
-﻿<!-- RpaWinUiComponents.csproj - Opravený pre NuGet packaging -->
+﻿<!-- RpaWinUiComponents/RpaWinUiComponents.csproj - Opravený -->
 <Project Sdk="Microsoft.NET.Sdk">
-
   <!-- Základné nastavenia projektu -->
   <PropertyGroup>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
@@ -10,6 +9,9 @@
     <UseWinUI>true</UseWinUI>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- RIEŠENIE: Vypnutie automatického pridávania Page items -->
+    <EnableDefaultPageItems>false</EnableDefaultPageItems>
 
     <!-- NuGet Package Metadata -->
     <PackageId>RpaWinUiComponents</PackageId>
@@ -23,11 +25,17 @@
     <RepositoryUrl>https://github.com/rpasolutions/RpaWinUiComponents</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
-    <PackageIcon>icon.png</PackageIcon>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+
+  <!-- Remove icon from package if it doesn't exist -->
+  <PropertyGroup Condition="!Exists('icon.png')">
+    <PackageIcon></PackageIcon>
+  </PropertyGroup>
+
+  <!-- Dependencies -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
@@ -37,34 +45,21 @@
     <PackageReference Include="System.Text.Json" Version="9.0.6" />
   </ItemGroup>
 
-
-  <!-- XAML Files -->
+  <!-- Explicitne definované XAML súbory -->
   <ItemGroup>
-    <Page Include="**/*.xaml" Exclude="bin/**;obj/**" />
+    <Page Include="AdvancedWinUiDataGrid\Views\AdvancedDataGridControl.xaml" />
+    <Page Include="AdvancedWinUiDataGrid\Themes\Generic.xaml" />
   </ItemGroup>
 
-  <!-- Code Behind Files -->
+  <!-- Code behind súbory -->
   <ItemGroup>
-    <Compile Update="**/*.xaml.cs" DependentUpon="%(Filename)" />
+    <Compile Update="AdvancedWinUiDataGrid\Views\AdvancedDataGridControl.xaml.cs" DependentUpon="AdvancedDataGridControl.xaml" />
   </ItemGroup>
 
   <!-- Package Content Files -->
   <ItemGroup>
-    <None Include="readme.md" Pack="true" PackagePath="\" />
-    <None Include="build/RpaWinUiComponents.targets" Pack="true" PackagePath="build/" />
-    <!-- Icon placeholder - vytvorte alebo odstráňte ak nemáte -->
-    <!-- <None Include="icon.png" Pack="true" PackagePath="\" Condition="Exists('icon.png')" /> -->
-  </ItemGroup>
-
-  <!-- Remove icon from package if it doesn't exist -->
-  <PropertyGroup Condition="!Exists('icon.png')">
-    <PackageIcon></PackageIcon>
-  </PropertyGroup>
-
-  <!-- Themes and Resources for packaging -->
-  <ItemGroup>
-    <None Include="AdvancedWinUiDataGrid/Themes/Generic.xaml" Pack="true" PackagePath="lib/$(TargetFramework)/Themes/" />
-    <EmbeddedResource Include="AdvancedWinUiDataGrid/Themes/Generic.xaml" />
+    <None Include="readme.md" Pack="true" PackagePath="\" Condition="Exists('readme.md')" />
+    <None Include="build\RpaWinUiComponents.targets" Pack="true" PackagePath="build\" Condition="Exists('build\RpaWinUiComponents.targets')" />
   </ItemGroup>
 
   <!-- Build Configuration -->
@@ -82,21 +77,5 @@
   <PropertyGroup>
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
-    <!-- Disable missing XML comment warnings -->
   </PropertyGroup>
-
-  <!-- Source code inclusion for debugging -->
-  <PropertyGroup>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-  </PropertyGroup>
-
-  <!-- Exclude demo from package -->
-  <ItemGroup>
-    <Compile Remove="Demo/**" />
-    <None Remove="Demo/**" />
-    <Page Remove="Demo/**" />
-  </ItemGroup>
-
 </Project>

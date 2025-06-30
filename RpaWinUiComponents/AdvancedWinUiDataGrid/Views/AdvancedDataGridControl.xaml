@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Views/AdvancedDataGridControl.xaml -->
+<!-- Views/AdvancedDataGridControl.xaml - Opravený -->
 <UserControl
     x:Class="RpaWinUiComponents.AdvancedWinUiDataGrid.Views.AdvancedDataGridControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -146,11 +146,12 @@
 
         <!-- Validation Progress Panel -->
         <Border Grid.Row="0" 
+                x:Name="ValidationProgressPanel"
                 Background="#F8F9FA" 
                 Padding="12,8"
                 BorderBrush="#DEE2E6"
                 BorderThickness="0,0,0,1"
-                Visibility="{x:Bind ViewModel.IsValidating, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                Visibility="Collapsed">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -163,14 +164,16 @@
 
                 <!-- Status Text -->
                 <TextBlock Grid.Row="0" Grid.Column="0"
-                           Text="{x:Bind ViewModel.ValidationStatus, Mode=OneWay}"
+                           x:Name="ValidationStatusText"
+                           Text="Validating..."
                            FontSize="12"
                            Foreground="#6C757D"
                            VerticalAlignment="Center"/>
 
                 <!-- Progress Percentage -->
                 <TextBlock Grid.Row="0" Grid.Column="1"
-                           Text="{x:Bind ViewModel.ValidationProgress, Mode=OneWay, Converter={StaticResource ProgressToPercentageConverter}}"
+                           x:Name="ValidationProgressText"
+                           Text="0%"
                            FontSize="12"
                            FontWeight="Bold"
                            Foreground="#007BFF"
@@ -179,7 +182,8 @@
 
                 <!-- Progress Bar -->
                 <ProgressBar Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                             Value="{x:Bind ViewModel.ValidationProgress, Mode=OneWay}"
+                             x:Name="ValidationProgressBar"
+                             Value="0"
                              Maximum="100"
                              Style="{StaticResource ValidationProgressStyle}"
                              Margin="0,6,0,0"/>

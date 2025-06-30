@@ -6,7 +6,11 @@ using Microsoft.UI.Xaml.Controls;
 using RpaWinUiComponents.AdvancedWinUiDataGrid;
 using RpaWinUiComponents.AdvancedWinUiDataGrid.Configuration;
 using RpaWinUiComponents.AdvancedWinUiDataGrid.Events;
-using RpaWinUiComponents.AdvancedWinUiDataGrid.Models;
+
+// Alias pre riešenie konfliktu ColumnDefinition
+using DataGridColumnDefinition = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ColumnDefinition;
+using ValidationRule = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ValidationRule;
+using ThrottlingConfig = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ThrottlingConfig;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -107,18 +111,18 @@ namespace RpaWinUiComponents.Demo
             }
         }
 
-        private List<ColumnDefinition> CreateSampleColumns()
+        private List<DataGridColumnDefinition> CreateSampleColumns()
         {
-            return new List<ColumnDefinition>
+            return new List<DataGridColumnDefinition>
             {
-                new ColumnDefinition("Meno", typeof(string)) { MinWidth = 100, MaxWidth = 200, Header = "Meno", ToolTip = "Celé meno osoby" },
-                new ColumnDefinition("Priezvisko", typeof(string)) { MinWidth = 100, MaxWidth = 200, Header = "Priezvisko" },
-                new ColumnDefinition("Vek", typeof(int)) { MinWidth = 60, MaxWidth = 100, Header = "Vek" },
-                new ColumnDefinition("Email", typeof(string)) { MinWidth = 150, MaxWidth = 300, Header = "Email" },
-                new ColumnDefinition("Plat", typeof(decimal)) { MinWidth = 100, MaxWidth = 150, Header = "Plat (€)" },
-                new ColumnDefinition("DatumNastupu", typeof(DateTime)) { MinWidth = 120, MaxWidth = 180, Header = "Dátum nástupu" },
-                new ColumnDefinition("Aktívny", typeof(bool)) { MinWidth = 80, MaxWidth = 100, Header = "Aktívny" },
-                new ColumnDefinition("Poznámky", typeof(string)) { MinWidth = 200, MaxWidth = 400, Header = "Poznámky" }
+                new DataGridColumnDefinition("Meno", typeof(string)) { MinWidth = 100, MaxWidth = 200, Header = "Meno", ToolTip = "Celé meno osoby" },
+                new DataGridColumnDefinition("Priezvisko", typeof(string)) { MinWidth = 100, MaxWidth = 200, Header = "Priezvisko" },
+                new DataGridColumnDefinition("Vek", typeof(int)) { MinWidth = 60, MaxWidth = 100, Header = "Vek" },
+                new DataGridColumnDefinition("Email", typeof(string)) { MinWidth = 150, MaxWidth = 300, Header = "Email" },
+                new DataGridColumnDefinition("Plat", typeof(decimal)) { MinWidth = 100, MaxWidth = 150, Header = "Plat (€)" },
+                new DataGridColumnDefinition("DatumNastupu", typeof(DateTime)) { MinWidth = 120, MaxWidth = 180, Header = "Dátum nástupu" },
+                new DataGridColumnDefinition("Aktívny", typeof(bool)) { MinWidth = 80, MaxWidth = 100, Header = "Aktívny" },
+                new DataGridColumnDefinition("Poznámky", typeof(string)) { MinWidth = 200, MaxWidth = 400, Header = "Poznámky" }
             };
         }
 

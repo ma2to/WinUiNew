@@ -1,14 +1,17 @@
-﻿// AdvancedWinUiDataGridControl.cs - OPRAVENÝ HLAVNÝ WRAPPER KOMPONENT
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.UI.Xaml.Controls;
+using RpaWinUiComponents.AdvancedWinUiDataGrid.Events;
+using RpaWinUiComponents.AdvancedWinUiDataGrid.Models;
+using RpaWinUiComponents.AdvancedWinUiDataGrid.Views;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.UI.Xaml.Controls;
-using RpaWinUiComponents.AdvancedWinUiDataGrid.Events;
-using RpaWinUiComponents.AdvancedWinUiDataGrid.Models;
-using RpaWinUiComponents.AdvancedWinUiDataGrid.Views;
+// Alias pre riešenie konfliktu ColumnDefinition
+using DataGridColumnDefinition = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ColumnDefinition;
+using ThrottlingConfig = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ThrottlingConfig;
+using ValidationRule = RpaWinUiComponents.AdvancedWinUiDataGrid.Models.ValidationRule;
 
 namespace RpaWinUiComponents.AdvancedWinUiDataGrid
 {
@@ -82,7 +85,7 @@ namespace RpaWinUiComponents.AdvancedWinUiDataGrid
         /// <param name="throttling">Throttling konfigurácia (voliteľné)</param>
         /// <param name="initialRowCount">Počiatočný počet riadkov</param>
         public async Task InitializeAsync(
-            List<ColumnDefinition> columns,
+            List<DataGridColumnDefinition> columns,
             List<ValidationRule>? validationRules = null,
             ThrottlingConfig? throttling = null,
             int initialRowCount = 100)
