@@ -30,5 +30,11 @@
     <None Include="Themes/Generic.xaml" Pack="true" PackagePath="lib/$(TargetFramework)/Themes/" />
     <None Include="build/RpaWinUiComponents.targets" Pack="true" PackagePath="build/" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="AdvancedWinUiDataGrid\Views\AdvancedDataGridControl.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
   
 </Project>
